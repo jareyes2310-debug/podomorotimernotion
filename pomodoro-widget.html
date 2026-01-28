@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Focus Timer</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:wght@300;600;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pomodoro: #d95550;
+            --short-break: #4c9f70;
+            --long-break: #457ca3;
+            --bg-dark: #1a1625;
+            --bg-mid: #2d2635;
+            --text-primary: #f5f1e8;
+            --text-dim: #a89fb0;
+            --shadow: rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Mono', monospace;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 30%, var(--pomodoro) 0%, transparent 25%),
+                radial-gradient(circle at 80% 70%, var(--short-break) 0%, transparent 25%),
+                radial-gradient(circle at 50% 50%, var(--long-break) 0%, transparent 30%);
+            opacity: 0.08;
+            animation: float 30s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(120deg); }
+            66% { transform: translate(-30px, 30px) rotate(240deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            padding: 3rem;
+            max-width: 480px;
+            width: 100%;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 3rem;
+            background: var(--bg-mid);
+            padding: 0.5rem;
+            border-radius: 16px;
+            box-shadow: 
+                inset 0 2px 8px var(--shadow),
+                0 4px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-family: 'DM Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .mode-tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mode-tab.active {
+            background: var(--active-color);
+            color: white;
+            box-shadow: 
+                0 4px 16px var(--active-color),
+                0 0 40px rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        body[data-mode="pomodoro"] {
+            --active-color: var(--pomodoro);
+        }
+
+        body[data-mode="short-break"] {
+            --active-color: var(--short-break);
+        }
+
+        body[data-mode="long-break"] {
+            --active-color: var(--long-break);
+        }
+
+        .timer-display {
+            text-align: center;
+            margin: 3rem 0;
+            position: relative;
+        }
+
+        .timer-circle {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+            filter: drop-shadow(0 0 20px var(--active-color));
+        }
+
+        .progress-ring-bg {
+            fill: none;
+            stroke: var(--bg-mid);
+            stroke-width: 8;
+        }
+
+        .progress-ring-progress {
+            fill: none;
+            stroke: var(--active-color);
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s linear, stroke 0.3s;
+        }
+
+        .time-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Fraunces', serif;
+            font-size: 5rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            text-shadow: 0 0 40px var(--active-color);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 3rem;
+        }
+
+        .control-btn {
+            padding: 1rem 2.5rem;
+            font-family: 'DM Mono', monospace;
+            font-size: 1rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 4px 16px var(--shadow),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn.primary {
+            background: var(--active-color);
+            color: white;
+        }
+
+        .control-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 8px 24px var(--active-color),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn.primary:active {
+            transform: translateY(0);
+        }
+
+        .control-btn.secondary {
+            background: var(--bg-mid);
+            color: var(--text-dim);
+        }
+
+        .control-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .session-info {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.875rem;
+            color: var(--text-dim);
+            letter-spacing: 0.5px;
+        }
+
+        .session-count {
+            color: var(--active-color);
+            font-weight: 500;
+            text-shadow: 0 0 10px var(--active-color);
+        }
+
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--bg-mid);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px var(--shadow);
+            font-size: 0.875rem;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .timer-circle {
+                width: 240px;
+                height: 240px;
+            }
+
+            .time-text {
+                font-size: 4rem;
+            }
+
+            .control-btn {
+                padding: 0.875rem 1.5rem;
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body data-mode="pomodoro">
+    <div class="notification" id="notification"></div>
+    
+    <div class="container">
+        <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="pomodoro" data-duration="45">Pomodoro</button>
+            <button class="mode-tab" data-mode="short-break" data-duration="15">Short Break</button>
+            <button class="mode-tab" data-mode="long-break" data-duration="20">Long Break</button>
+        </div>
+
+        <div class="timer-display">
+            <div class="timer-circle">
+                <svg class="progress-ring" width="280" height="280">
+                    <circle class="progress-ring-bg" cx="140" cy="140" r="132"></circle>
+                    <circle class="progress-ring-progress" cx="140" cy="140" r="132" 
+                            style="stroke-dasharray: 829; stroke-dashoffset: 0;"></circle>
+                </svg>
+                <div class="time-text">45:00</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn primary" id="startBtn">Start</button>
+            <button class="control-btn secondary" id="resetBtn">Reset</button>
+        </div>
+
+        <div class="session-info">
+            Session <span class="session-count" id="sessionCount">1</span> of 4
+        </div>
+    </div>
+
+    <script>
+        class PomodoroTimer {
+            constructor() {
+                this.modes = {
+                    'pomodoro': 45 * 60,
+                    'short-break': 15 * 60,
+                    'long-break': 20 * 60
+                };
+                
+                this.currentMode = 'pomodoro';
+                this.timeLeft = this.modes[this.currentMode];
+                this.totalTime = this.timeLeft;
+                this.isRunning = false;
+                this.timer = null;
+                this.sessionCount = 1;
+                
+                this.initElements();
+                this.initEventListeners();
+                this.updateDisplay();
+                this.requestNotificationPermission();
+            }
+
+            initElements() {
+                this.timeText = document.querySelector('.time-text');
+                this.startBtn = document.getElementById('startBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.modeTabs = document.querySelectorAll('.mode-tab');
+                this.progressCircle = document.querySelector('.progress-ring-progress');
+                this.sessionCountEl = document.getElementById('sessionCount');
+                this.notification = document.getElementById('notification');
+                
+                this.circumference = 2 * Math.PI * 132;
+                this.progressCircle.style.strokeDasharray = this.circumference;
+            }
+
+            initEventListeners() {
+                this.startBtn.addEventListener('click', () => this.toggleTimer());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                
+                this.modeTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const mode = tab.dataset.mode;
+                        this.switchMode(mode);
+                    });
+                });
+
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden && this.isRunning) {
+                        this.updateDisplay();
+                    }
+                });
+            }
+
+            switchMode(mode) {
+                if (this.isRunning) this.toggleTimer();
+                
+                this.currentMode = mode;
+                this.timeLeft = this.modes[mode];
+                this.totalTime = this.timeLeft;
+                
+                document.body.dataset.mode = mode;
+                
+                this.modeTabs.forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.mode === mode);
+                });
+                
+                this.updateDisplay();
+                this.showNotification(`Switched to ${mode.replace('-', ' ')}`);
+            }
+
+            toggleTimer() {
+                this.isRunning = !this.isRunning;
+                
+                if (this.isRunning) {
+                    this.startBtn.textContent = 'Pause';
+                    this.timer = setInterval(() => this.tick(), 1000);
+                } else {
+                    this.startBtn.textContent = 'Start';
+                    clearInterval(this.timer);
+                }
+            }
+
+            tick() {
+                if (this.timeLeft > 0) {
+                    this.timeLeft--;
+                    this.updateDisplay();
+                } else {
+                    this.complete();
+                }
+            }
+
+            complete() {
+                this.toggleTimer();
+                this.playSound();
+                
+                if (this.currentMode === 'pomodoro') {
+                    this.sessionCount++;
+                    this.sessionCountEl.textContent = this.sessionCount;
+                    
+                    const nextMode = this.sessionCount % 4 === 0 ? 'long-break' : 'short-break';
+                    this.showNotification('🎉 Pomodoro complete! Time for a break.');
+                    
+                    setTimeout(() => this.switchMode(nextMode), 2000);
+                } else {
+                    this.showNotification('✨ Break complete! Ready to focus?');
+                    setTimeout(() => this.switchMode('pomodoro'), 2000);
+                }
+            }
+
+            reset() {
+                if (this.isRunning) this.toggleTimer();
+                this.timeLeft = this.modes[this.currentMode];
+                this.totalTime = this.timeLeft;
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                const minutes = Math.floor(this.timeLeft / 60);
+                const seconds = this.timeLeft % 60;
+                this.timeText.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                const progress = (this.totalTime - this.timeLeft) / this.totalTime;
+                const offset = this.circumference * (1 - progress);
+                this.progressCircle.style.strokeDashoffset = offset;
+
+                document.title = `${this.timeText.textContent} - Pomodoro Timer`;
+            }
+
+            showNotification(message) {
+                this.notification.textContent = message;
+                this.notification.classList.add('show');
+                
+                setTimeout(() => {
+                    this.notification.classList.remove('show');
+                }, 3000);
+
+                if (Notification.permission === 'granted' && document.hidden) {
+                    new Notification('Pomodoro Timer', { body: message });
+                }
+            }
+
+            playSound() {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            }
+
+            requestNotificationPermission() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+            }
+        }
+
+        const pomodoroTimer = new PomodoroTimer();
+    </script>
+</body>
+</html>
